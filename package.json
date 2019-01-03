@@ -1,0 +1,59 @@
+{
+	"name": "colorjs",
+	"version": "1.0.0",
+	"description": "",
+	"main": "lib/color.js",
+	"module": "esm/color.js",
+	"types": "lib/color.d.ts",
+	"scripts": {
+		"prebuild": "rm -Rf lib esm",
+		"build:docs": "typedoc --options typedoc.js",
+		"build:esm": "tsc -p tsconfig.esm.json",
+		"build:cjs": "tsc",
+		"build": "npm run build:cjs && npm run build:esm",
+		"prepublishOnly": "npm run build",
+		"prerelease": "npm run test:cov",
+		"release": "standard-version",
+		"postrelease": "git push --follow-tags origin master && npm publish",
+		"coveralls": "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
+		"test:v": "jest --verbose",
+		"test:cov": "jest --verbose --coverage",
+		"test:new": "jest -o --verbose --coverage",
+		"test": "npm run test:cov"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "MIT",
+	"files": [
+		"lib",
+		"esm",
+		"src"
+	],
+	"jest": {
+		"moduleFileExtensions": [
+			"ts",
+			"js"
+		],
+		"transform": {
+			"^.+\\.ts$": "ts-jest"
+		},
+		"testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(js|ts)$"
+	},
+	"devDependencies": {
+		"@types/jest": "^23.3.10",
+		"@types/node": "^10.12.12",
+		"axios": "^0.18.0",
+		"babel-jest": "^23.6.0",
+		"coveralls": "^3.0.2",
+		"jest": "^23.6.0",
+		"rollup": "^1.0.1",
+		"standard-version": "^4.4.0",
+		"ts-jest": "^23.10.5",
+		"ts-node": "^7.0.1",
+		"typedoc": "^0.14.0",
+		"typescript": "^3.2.2"
+	},
+	"dependencies": {
+		"safe-types": "^4.12.1"
+	}
+}

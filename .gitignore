@@ -1,0 +1,7 @@
+.*
+!.gitignore
+!.prettierrc
+node_modules
+coverage
+lib
+esm
