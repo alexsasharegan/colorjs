@@ -2,14 +2,12 @@ import * as C from "../src/color";
 import * as Utils from "../src/utils";
 import { Result } from "safe-types";
 
-interface ColorTable {
+const color_tables_hsl: {
 	color: string;
 	hex: string;
 	rgb: Utils.ColorTuple;
 	hsl: Utils.ColorTuple;
-}
-
-const color_tables: ColorTable[] = [
+}[] = [
 	{
 		color: "Black",
 		hex: "#000000",
@@ -108,6 +106,110 @@ const color_tables: ColorTable[] = [
 	},
 ];
 
+const color_tables_hsv: {
+	color: string;
+	hex: string;
+	rgb: Utils.ColorTuple;
+	hsv: Utils.ColorTuple;
+}[] = [
+	{
+		color: "Black",
+		hsv: [0, 0, 0],
+		hex: "#000000",
+		rgb: [0, 0, 0],
+	},
+	{
+		color: "White",
+		hsv: [0, 0, 100],
+		hex: "#FFFFFF",
+		rgb: [255, 255, 255],
+	},
+	{
+		color: "Red",
+		hsv: [0, 100, 100],
+		hex: "#FF0000",
+		rgb: [255, 0, 0],
+	},
+	{
+		color: "Lime",
+		hsv: [120, 100, 100],
+		hex: "#00FF00",
+		rgb: [0, 255, 0],
+	},
+	{
+		color: "Blue",
+		hsv: [240, 100, 100],
+		hex: "#0000FF",
+		rgb: [0, 0, 255],
+	},
+	{
+		color: "Yellow",
+		hsv: [60, 100, 100],
+		hex: "#FFFF00",
+		rgb: [255, 255, 0],
+	},
+	{
+		color: "Cyan",
+		hsv: [180, 100, 100],
+		hex: "#00FFFF",
+		rgb: [0, 255, 255],
+	},
+	{
+		color: "Magenta",
+		hsv: [300, 100, 100],
+		hex: "#FF00FF",
+		rgb: [255, 0, 255],
+	},
+	{
+		color: "Silver",
+		hsv: [0, 0, 75],
+		hex: "#C0C0C0",
+		rgb: [192, 192, 192],
+	},
+	{
+		color: "Gray",
+		hsv: [0, 0, 50],
+		hex: "#808080",
+		rgb: [128, 128, 128],
+	},
+	{
+		color: "Maroon",
+		hsv: [0, 100, 50],
+		hex: "#800000",
+		rgb: [128, 0, 0],
+	},
+	{
+		color: "Olive",
+		hsv: [60, 100, 50],
+		hex: "#808000",
+		rgb: [128, 128, 0],
+	},
+	{
+		color: "Green",
+		hsv: [120, 100, 50],
+		hex: "#008000",
+		rgb: [0, 128, 0],
+	},
+	{
+		color: "Purple",
+		hsv: [300, 100, 50],
+		hex: "#800080",
+		rgb: [128, 0, 128],
+	},
+	{
+		color: "Teal",
+		hsv: [180, 100, 50],
+		hex: "#008080",
+		rgb: [0, 128, 128],
+	},
+	{
+		color: "Navy",
+		hsv: [240, 100, 50],
+		hex: "#000080",
+		rgb: [0, 0, 128],
+	},
+];
+
 describe("parseHexString", async () => {
 	it("should return Ok with valid cases", async () => {
 		let tt = [
@@ -154,7 +256,7 @@ describe("parseHexString", async () => {
 
 describe("rgbToHSL", async () => {
 	it("should return Ok", async () => {
-		let tt = [...color_tables];
+		let tt = [...color_tables_hsl];
 
 		expect.assertions(tt.length);
 		for (let tc of tt) {
@@ -200,7 +302,7 @@ describe("rgbToHSL", async () => {
 
 describe("hslToRGB", async () => {
 	it("should return Ok", async () => {
-		let tt = [...color_tables];
+		let tt = [...color_tables_hsl];
 
 		expect.assertions(tt.length);
 		for (let tc of tt) {
@@ -277,9 +379,88 @@ describe("hslToRGB", async () => {
 	});
 });
 
+describe("hsvToRGB", async () => {
+	it("should return Ok", async () => {
+		let tt = [...color_tables_hsv];
+
+		expect.assertions(tt.length);
+		for (let tc of tt) {
+			Utils.hsvToRGB(...tc.hsv).match({
+				Ok: rgb => {
+					// The formula isn't perfect in both directions.
+					// This color is 1 off.
+					if (tc.color === "Silver") {
+						expect({ ...tc, rgb }).toEqual({
+							...tc,
+							rgb: tc.rgb.map(n => n - 1),
+						});
+						return;
+					}
+					// For a better failure message
+					expect({ ...tc, rgb }).toEqual(tc);
+				},
+				Err: err => {
+					console.error(err, tc);
+					throw new Error(
+						`Expected ${tc.color} to be ${tc.rgb.join(", ")}`
+					);
+				},
+			});
+		}
+	});
+
+	it("should return Err", async () => {
+		let tt: Array<{
+			in: Utils.ColorTuple;
+			out: Result<Utils.ColorTuple, Utils.ColorParseError>;
+		}> = [
+			{
+				in: [0, 0, 101],
+				out: Result.Err(Utils.ColorErrors.InvalidRange),
+			},
+			{
+				in: [0, 0, -1],
+				out: Result.Err(Utils.ColorErrors.InvalidRange),
+			},
+			{
+				in: [0, 101, 10],
+				out: Result.Err(Utils.ColorErrors.InvalidRange),
+			},
+			{
+				in: [0, -1, 10],
+				out: Result.Err(Utils.ColorErrors.InvalidRange),
+			},
+			{
+				in: [-1, 0, 0],
+				out: Result.Err(Utils.ColorErrors.InvalidRange),
+			},
+			{
+				in: [361, 0, 0],
+				out: Result.Err(Utils.ColorErrors.InvalidRange),
+			},
+			{
+				in: [NaN, 0, 0],
+				out: Result.Err(Utils.ColorErrors.NaN),
+			},
+			{
+				in: [0, NaN, 0],
+				out: Result.Err(Utils.ColorErrors.NaN),
+			},
+			{
+				in: [0, 0, NaN],
+				out: Result.Err(Utils.ColorErrors.NaN),
+			},
+		];
+
+		for (let tc of tt) {
+			expect(Utils.hsvToRGB(...tc.in)).toEqual(tc.out);
+		}
+	});
+});
+
 describe("Hex", async () => {
 	it("should work", async () => {
-		let tt = [...color_tables];
+		let tt = [...color_tables_hsl];
 
 		for (let tc of tt) {
 			let c = new C.Hex(tc.hex);
@@ -294,7 +475,7 @@ describe("Hex", async () => {
 
 describe("RGB", async () => {
 	it("should work", async () => {
-		let tt = [...color_tables];
+		let tt = [...color_tables_hsl];
 
 		for (let tc of tt) {
 			let c = new C.RGB(...tc.rgb);
@@ -309,7 +490,7 @@ describe("RGB", async () => {
 
 describe("HSL", async () => {
 	it("should work", async () => {
-		let tt = [...color_tables];
+		let tt = [...color_tables_hsl];
 
 		for (let tc of tt) {
 			let c = new C.HSL(...tc.hsl);

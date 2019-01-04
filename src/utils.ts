@@ -55,6 +55,35 @@ export const ColorErrors = {
 	},
 };
 
+type Validator<T> = (...x: T[]) => Result<void, ColorParseError>;
+
+function validateRange(low: number, high: number): Validator<number> {
+	let min = Math.min(low, high);
+	let max = Math.max(low, high);
+
+	return (...ns) => {
+		for (let n of ns) {
+			if (min > n || n > max) {
+				return Result.Err(ColorErrors.InvalidRange);
+			}
+		}
+
+		return Result.Ok(undefined);
+	};
+}
+
+const validateHue = validateRange(0, 360);
+const validatePercent = validateRange(0, 100);
+const validate8bit = validateRange(0, 0xff);
+
+const validateNaN: Validator<number> = (...ns) => {
+	if (ns.some(Number.isNaN)) {
+		return Result.Err(ColorErrors.NaN);
+	}
+
+	return Result.Ok(undefined);
+};
+
 export function parseHexString(s: string): Result<ColorTuple, ColorParseError> {
 	if (s.startsWith("#")) {
 		s = s.slice(1);
@@ -103,13 +132,10 @@ export function rgbToHSL(
 	b: number
 ): Result<ColorTuple, ColorParseError> {
 	// https://www.rapidtables.com/convert/color/rgb-to-hsl.html
-	for (let n of [r, g, b]) {
-		if (Number.isNaN(n)) {
-			return Result.Err(ColorErrors.NaN);
-		}
-		if (n > 0xff) {
-			return Result.Err(ColorErrors.InvalidRange);
-		}
+	let valid = Result.every([validateNaN(r, g, b), validate8bit(r, g, b)]);
+	if (valid.is_err()) {
+		let err = valid.unwrap_err();
+		return Result.Err(err);
 	}
 
 	// Nominalize range to 0-1
@@ -160,25 +186,14 @@ export function hslToRGB(
 	l: number
 ): Result<ColorTuple, ColorParseError> {
 	// https://www.rapidtables.com/convert/color/hsl-to-rgb.html
-	let hsl = [h, s, l];
-	for (let i = 0; i < 3; i++) {
-		let n = hsl[i];
-		if (Number.isNaN(n)) {
-			return Result.Err(ColorErrors.NaN);
-		}
-		switch (i) {
-			case 0:
-				if (0 > n || n > 360) {
-					return Result.Err(ColorErrors.InvalidRange);
-				}
-				break;
-			case 1:
-			case 2:
-				if (0 > n || n > 100) {
-					return Result.Err(ColorErrors.InvalidRange);
-				}
-				break;
-		}
+	let valid = Result.every([
+		validateNaN(h, s, l),
+		validateHue(h),
+		validatePercent(s, l),
+	]);
+	if (valid.is_err()) {
+		let err = valid.unwrap_err();
+		return Result.Err(err);
 	}
 
 	if (h === 360) {
@@ -188,10 +203,80 @@ export function hslToRGB(
 	s /= 100;
 	l /= 100;
 
-	let C = (1 - Math.abs(2 * l - 1)) * s;
 	let hh = h / 60;
+	let C = (1 - Math.abs(2 * l - 1)) * s;
 	let X = C * (1 - Math.abs((hh % 2) - 1));
 	let M = l - C / 2;
+
+	let r = 0;
+	let g = 0;
+	let b = 0;
+
+	switch (true) {
+		case h < 60:
+			r = C;
+			g = X;
+			break;
+		case h < 120:
+			r = X;
+			g = C;
+			break;
+		case h < 180:
+			g = C;
+			b = X;
+			break;
+		case h < 240:
+			g = X;
+			b = C;
+			break;
+		case h < 300:
+			r = X;
+			b = C;
+			break;
+		case h < 360:
+			r = C;
+			b = X;
+			break;
+	}
+
+	r += M;
+	g += M;
+	b += M;
+
+	r *= 0xff;
+	g *= 0xff;
+	b *= 0xff;
+
+	return Result.Ok<ColorTuple>([Math.round(r), Math.round(g), Math.round(b)]);
+}
+
+export function hsvToRGB(
+	h: number,
+	s: number,
+	v: number
+): Result<ColorTuple, ColorParseError> {
+	// https://www.rapidtables.com/convert/color/hsv-to-rgb.html
+	let valid = Result.every([
+		validateNaN(h, s, v),
+		validateHue(h),
+		validatePercent(s, v),
+	]);
+	if (valid.is_err()) {
+		let err = valid.unwrap_err();
+		return Result.Err(err);
+	}
+
+	if (h === 360) {
+		h = 0;
+	}
+	// Nominalize range to 0-1
+	s /= 100;
+	v /= 100;
+
+	let hh = h / 60;
+	let C = v * s;
+	let X = C * (1 - Math.abs((hh % 2) - 1));
+	let M = v - C;
 
 	let r = 0;
 	let g = 0;

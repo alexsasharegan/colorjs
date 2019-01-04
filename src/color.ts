@@ -4,11 +4,13 @@ export enum ColorFormat {
 	Hex = "hex",
 	RGB = "rbg",
 	HSL = "hsl",
+	HSV = "hsv",
 }
 
 type ColorMatcher<T> = {
 	[ColorFormat.Hex]: (c: Hex) => T;
 	[ColorFormat.HSL]: (c: HSL) => T;
+	[ColorFormat.HSV]: (c: HSV) => T;
 	[ColorFormat.RGB]: (c: RGB) => T;
 };
 
@@ -18,6 +20,7 @@ export interface BasicColor {
 	toHex(): Hex;
 	toRGB(): RGB;
 	toHSL(): HSL;
+	toHSV(): HSV;
 }
 
 export class RGB implements BasicColor {
@@ -56,6 +59,10 @@ export class RGB implements BasicColor {
 			.map(([h, s, l]) => new HSL(h, s, l))
 			.unwrap();
 	}
+
+	toHSV(): HSV {
+		throw new Error("Method not implemented.");
+	}
 }
 
 export class HSL implements BasicColor {
@@ -91,6 +98,10 @@ export class HSL implements BasicColor {
 		return hslToRGB(this.h, this.s, this.l)
 			.map(([r, g, b]) => new RGB(r, g, b))
 			.unwrap();
+	}
+
+	toHSV(): HSV {
+		throw new Error("Method not implemented.");
 	}
 }
 
@@ -138,6 +149,10 @@ export class Hex implements BasicColor {
 		return new RGB(this.r, this.g, this.b);
 	}
 
+	toHSV(): HSV {
+		throw new Error("Method not implemented.");
+	}
+
 	static fromValues(r: number, g: number, b: number) {
 		let hex = new Hex();
 		hex.r = r;
@@ -148,4 +163,40 @@ export class Hex implements BasicColor {
 	}
 }
 
-export type Color = RGB | HSL | Hex;
+export class HSV implements BasicColor {
+	constructor(
+		public h: number = 0,
+		public s: number = 0,
+		public v: number = 0
+	) {}
+
+	get format() {
+		return ColorFormat.HSV;
+	}
+
+	match<T>(_: ColorMatcher<T>): T {
+		throw new Error("Method not implemented.");
+	}
+
+	toString(): string {
+		throw new Error("Method not implemented.");
+	}
+
+	toHex(): Hex {
+		throw new Error("Method not implemented.");
+	}
+
+	toRGB(): RGB {
+		throw new Error("Method not implemented.");
+	}
+
+	toHSL(): HSL {
+		throw new Error("Method not implemented.");
+	}
+
+	toHSV(): HSV {
+		return this;
+	}
+}
+
+export type Color = RGB | HSL | HSV | Hex;
